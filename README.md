@@ -1,3 +1,32 @@
+# Fork
+
+This is a (temporary?) fork of https://github.com/bonede/tree-sitter-ng. All credit goes to the original author, I only made minor changes.
+
+I wanted to build tree-sitter-xml but couldn't get it to work with the original library. I made some changes until it worked.
+Note that I don't have any real experience with JNI nor groovy or gradle so my solution is probably not very good but it does seem to work.
+
+With these modifications I was able to build tree-sitter-xml with these commands:
+
+```console
+# get the xml version
+./gradlew gen --parser-name=xml --parser-version=0.7.0 --parser-zip=https://github.com/tree-sitter-grammars/tree-sitter-xml/archive/refs/tags/v0.7.0.zip
+
+# build the code
+./gradlew tree-sitter-xml:buildNativeLib
+
+# create a jar
+./gradlew :tree-sitter-xml:jar
+```
+
+At the end of this the jar file will be available in `tree-sitter-xml/build/libs`. You can install it locally in your maven folder:
+
+```console
+mvn install:install-file -Dfile=tree-sitter-xml/build/libs/tree-sitter-xml-0.7.0.jar -DgroupId=io.github.bonede -DartifactId=tree-sitter-xml -Dversion=0.7.0 -Dpackaging=jar
+```
+
+What follows is the original README.
+---
+
 # Tree Sitter NG
 Next generation Tree Sitter Java binding.
 

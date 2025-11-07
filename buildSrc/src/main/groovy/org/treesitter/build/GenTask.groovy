@@ -31,23 +31,25 @@ package org.treesitter;
 
 import org.treesitter.utils.NativeUtils;
 
-public class $className implements TSLanguage {
+public class $className extends TSLanguage {
 
     static {
         NativeUtils.loadLib("lib/tree-sitter-$libShortName");
     }
     private native static long tree_sitter_$idName();
 
-    private final long ptr;
+	public $className() {
+		super(tree_sitter_xml());
+	}
 
-    public $className() {
-        ptr = tree_sitter_$idName();
+	private $className(long ptr) {
+        super(ptr);
     }
 
-    @Override
-    public long getPtr() {
-        return ptr;
-    }
+	@Override
+	public TSLanguage copy() {
+		return new $className(copyPtr());
+	}
 }
 """
         classFile.getParentFile().mkdirs()
@@ -122,54 +124,11 @@ java {
     withSourcesJar()
 }
 
-publishing {
-    repositories {
-        maven {
-            name = "MavenCentral"
-            def releasesRepoUrl = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
-            def snapshotsRepoUrl =  "https://s01.oss.sonatype.org/content/repositories/snapshots/"
-            credentials {
-                username = ossrhUsername
-                password = ossrhPassword
-            }
-            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-        }
-    }
-    publications {
-        maven(MavenPublication) {
-            from components.java
-            pom {
-                name = libName
-                url = 'https://github.com/bonede/tree-sitter-ng'
-                description = "Next generation Tree Sitter Java binding"
-                licenses {
-                    license {
-                        name = 'MIT'
-                    }
-                }
-                scm {
-                    connection = 'scm:git:https://github.com/bonede/tree-sitter-ng.git'
-                    developerConnection = 'scm:git:https://github.com/bonede/tree-sitter-ng.git'
-                    url = 'https://github.com/bonede/tree-sitter-ng'
-                }
-                developers {
-                    developer {
-                        id = 'bonede'
-                        name = 'Wang Liang'
-                        email = 'bonede@qq.com'
-                    }
-                }
-            }
-        }
-    }
-}
-
-
 signing {
     sign configurations.archives
     sign publishing.publications
 }
-tasks.register('downloadSource') {
+tasks.register('downloadSourceLib') {
     group = "build setup"
     description = "Download parser source"
     def zipUrl = "$url"
@@ -192,17 +151,21 @@ tasks.register('downloadSource') {
 
 }
 
-tasks.register("buildNative") {
+tasks.register("buildNativeLib") {
     group = "build"
     description = "Build parser native modules"
-    dependsOn "downloadSource", rootProject.bootstrap
+    dependsOn "downloadSourceLib", rootProject.downloadZig
     def jniSrcDir = Utils.jniSrcDir(project)
     def outDir = Utils.jniOutDir(project)
     def jniCFile = Utils.jniCFile(project, "org_treesitter_TreeSitter${capitalized}.c")
-    def parserCFile = Utils.libParserCFile(project, libName, libVersion)
-    def scannerCFile = Utils.libScannerCFile(project, libName, libVersion)
     def libSrcDir = Utils.libSrcDir(project, libName, libVersion)
     def jniInclude = Utils.jniIncludeDir(project)
+
+	def downloadDir = Utils.libDownloadDir(project, libName)
+	def archiveDir = downloadDir.dir("\${libName}-\${libVersion}")
+	def libXmlSrcDir = archiveDir.dir("xml/src") 
+	def parserCFile = libXmlSrcDir.file("parser.c")
+	def scannerCFile = libXmlSrcDir.file("scanner.c")
 
     def targets = Utils.treeSitterTargets(project)
     def outputFiles = targets.collect()
@@ -229,8 +192,11 @@ tasks.register("buildNative") {
                         "-I", libSrcDir,
                         "-I", jniInclude,
                         "-I", jniMdInclude,
+						"-I", libXmlSrcDir,
                         "-o", jniOutFile,
                         jniCFile,
+						parserCFile,
+              			scannerCFile
             ]
 
             cmd.addAll(files)
@@ -275,7 +241,8 @@ JNIEXPORT jlong JNICALL Java_org_treesitter_TreeSitter${capitalized}_tree_1sitte
     }
 
     static void updateSettingsGradle(Project project, String libShortName){
-        def projectLine = "include 'tree-sitter-$libShortName'"
+		// include a linefeed
+        def projectLine = "\ninclude 'tree-sitter-$libShortName'"
         def settingsFile = project.rootProject.file("settings.gradle")
         def shouldUpdate = true
 
