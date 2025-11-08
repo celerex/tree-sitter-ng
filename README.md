@@ -21,7 +21,22 @@ With these modifications I was able to build tree-sitter-xml with these commands
 At the end of this the jar file will be available in `tree-sitter-xml/build/libs`. You can install it locally in your maven folder:
 
 ```console
+# build jar
+./gradlew :tree-sitter-vue:jar
+# install jar
 mvn install:install-file -Dfile=tree-sitter-xml/build/libs/tree-sitter-xml-0.7.0.jar -DgroupId=io.github.bonede -DartifactId=tree-sitter-xml -Dversion=0.7.0 -Dpackaging=jar
+```
+
+## Vue
+
+The vue folder was already present and seemed to be correct, however the version I pulled in from maven was not OK.
+
+I just reran the last two steps to get to a correct version:
+
+```console
+
+
+mvn install:install-file -Dfile=tree-sitter-vue/build/libs/tree-sitter-vue-0.2.1a.jar -DgroupId=io.github.bonede -DartifactId=tree-sitter-vue -Dversion=0.2.1 -Dpackaging=jar
 ```
 
 What follows is the original README.
